@@ -1,4 +1,4 @@
-package com.example.aplicacioncrud;
+package com.example.aplicacioncrud.activities;
 
 import android.app.AlertDialog;
 import android.content.Intent;
@@ -16,6 +16,11 @@ import androidx.core.view.ViewCompat;
 import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.example.aplicacioncrud.R;
+import com.example.aplicacioncrud.adapters.UsuarioAdapter;
+import com.example.aplicacioncrud.api.UsuarioApiClient;
+import com.example.aplicacioncrud.models.Usuario;
 
 import java.util.List;
 
@@ -43,31 +48,7 @@ public class MainActivity extends AppCompatActivity {
 
         btnAgregarUsuario.setOnClickListener(v -> mostrarDialogoUsuario(null));
 
-        cargarUsuariosDesdeAPI();
-    }
-
-    private void cargarUsuariosDesdeAPI() {
-        new Thread(() -> {
-            try {
-                List<Usuario> listaUsuarios = ApiClient.getUsuarios();
-
-                runOnUiThread(() -> {
-                    adapter = new UsuarioAdapter(listaUsuarios, usuario -> {
-                        Intent intent = new Intent(MainActivity.this, GastosActivity.class);
-                        intent.putExtra("USUARIO_ID", usuario.id);
-                        intent.putExtra("USUARIO_NOMBRE", usuario.nombre);
-                        startActivity(intent);
-                    }, this::mostrarDialogoUsuario);
-                    rvUsuarios.setAdapter(adapter);
-                });
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() ->
-                        Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                );
-            }
-        }).start();
+        cargarUsuarios();
     }
 
     private void mostrarDialogoUsuario(Usuario usuarioExistente) {
@@ -109,6 +90,30 @@ public class MainActivity extends AppCompatActivity {
         builder.show();
     }
 
+    private void cargarUsuarios() {
+        new Thread(() -> {
+            try {
+                List<Usuario> listaUsuarios = UsuarioApiClient.getUsuarios();
+
+                runOnUiThread(() -> {
+                    adapter = new UsuarioAdapter(listaUsuarios, usuario -> {
+                        Intent intent = new Intent(MainActivity.this, GastosActivity.class);
+                        intent.putExtra("USUARIO_ID", usuario.id);
+                        intent.putExtra("USUARIO_NOMBRE", usuario.nombre);
+                        startActivity(intent);
+                    }, this::mostrarDialogoUsuario);
+                    rvUsuarios.setAdapter(adapter);
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() ->
+                        Toast.makeText(MainActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                );
+            }
+        }).start();
+    }
+
     private void crearUsuario(String nombre, String email) {
         new Thread(() -> {
             try {
@@ -116,11 +121,13 @@ public class MainActivity extends AppCompatActivity {
                 nuevo.nombre = nombre;
                 nuevo.email = email;
 
-                Usuario creado = ApiClient.createUsuario(nuevo);
+                Usuario creado = UsuarioApiClient.createUsuario(nuevo);
 
                 runOnUiThread(() -> {
                     if (creado != null && creado.id != 0) {
-                        cargarUsuariosDesdeAPI();
+                        cargarUsuarios();
+                        Toast.makeText(this, "Usuario " + creado.nombre +
+                                " creado con éxito", Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(this, "Error al crear", Toast.LENGTH_SHORT).show();
                     }
@@ -139,8 +146,13 @@ public class MainActivity extends AppCompatActivity {
                 actualizado.nombre = nombre;
                 actualizado.email = email;
 
-                ApiClient.updateUsuario(id, actualizado);
-                runOnUiThread(this::cargarUsuariosDesdeAPI);
+                UsuarioApiClient.updateUsuario(id, actualizado);
+                runOnUiThread(() -> {
+                    cargarUsuarios();
+                    Toast.makeText(this, "Usuario " + actualizado.nombre +
+                            " actualizado con éxito!!", Toast.LENGTH_SHORT).show();
+                });
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -150,8 +162,12 @@ public class MainActivity extends AppCompatActivity {
     private void borrarUsuario(int id) {
         new Thread(() -> {
             try {
-                ApiClient.deleteUsuario(id);
-                runOnUiThread(this::cargarUsuariosDesdeAPI);
+                UsuarioApiClient.deleteUsuario(id);
+                runOnUiThread(() -> {
+                    cargarUsuarios();
+                    Toast.makeText(this, "Usuario eliminado exitosamente!!",
+                            Toast.LENGTH_SHORT).show();
+                });
             } catch (Exception e) {
                 e.printStackTrace();
             }

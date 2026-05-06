@@ -1,4 +1,4 @@
-package com.example.aplicacioncrud;
+package com.example.aplicacioncrud.models;
 
 public class Gasto {
     public int id;

@@ -1,4 +1,4 @@
-package com.example.aplicacioncrud;
+package com.example.aplicacioncrud.activities;
 
 import android.app.AlertDialog;
 import android.os.Bundle;
@@ -16,12 +16,17 @@ import androidx.core.view.WindowInsetsCompat;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.aplicacioncrud.R;
+import com.example.aplicacioncrud.adapters.GastoAdapter;
+import com.example.aplicacioncrud.api.GastoApiClient;
+import com.example.aplicacioncrud.models.Gasto;
+
 import java.util.List;
 
 public class GastosActivity extends AppCompatActivity {
 
-    private int idUsuarioMaestro;
-    private String nombreUsuarioMaestro;
+    private int idUsuario;
+    private String nombreUsuario;
     private RecyclerView rvGastos;
     private GastoAdapter adapter;
     private Button btnAgregarGasto;
@@ -38,16 +43,16 @@ public class GastosActivity extends AppCompatActivity {
             return insets;
         });
 
-        idUsuarioMaestro = getIntent().getIntExtra("USUARIO_ID", 0);
-        nombreUsuarioMaestro = getIntent().getStringExtra("USUARIO_NOMBRE");
+        idUsuario = getIntent().getIntExtra("USUARIO_ID", 0);
+        nombreUsuario = getIntent().getStringExtra("USUARIO_NOMBRE");
 
-        if (idUsuarioMaestro == 0) {
+        if (idUsuario == 0) {
             Toast.makeText(this, "Error de ID", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
 
-        setTitle("Gastos: " + nombreUsuarioMaestro);
+        setTitle("Gastos: " + nombreUsuario);
 
         rvGastos = findViewById(R.id.rvGastos);
         rvGastos.setLayoutManager(new LinearLayoutManager(this));
@@ -55,26 +60,7 @@ public class GastosActivity extends AppCompatActivity {
 
         btnAgregarGasto.setOnClickListener(v -> mostrarDialogoGasto(null));
 
-        cargarGastosDesdeAPI();
-    }
-
-    private void cargarGastosDesdeAPI() {
-        new Thread(() -> {
-            try {
-                List<Gasto> listaGastos = ApiClient.getGastosPorUsuario(idUsuarioMaestro);
-
-                runOnUiThread(() -> {
-                    adapter = new GastoAdapter(listaGastos, this::mostrarDialogoGasto);
-                    rvGastos.setAdapter(adapter);
-                });
-
-            } catch (Exception e) {
-                e.printStackTrace();
-                runOnUiThread(() ->
-                        Toast.makeText(GastosActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show()
-                );
-            }
-        }).start();
+        cargarGastos();
     }
 
     private void mostrarDialogoGasto(Gasto gastoExistente) {
@@ -121,6 +107,25 @@ public class GastosActivity extends AppCompatActivity {
         builder.show();
     }
 
+    private void cargarGastos() {
+        new Thread(() -> {
+            try {
+                List<Gasto> listaGastos = GastoApiClient.getGasto(idUsuario);
+
+                runOnUiThread(() -> {
+                    adapter = new GastoAdapter(listaGastos, this::mostrarDialogoGasto);
+                    rvGastos.setAdapter(adapter);
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() ->
+                        Toast.makeText(GastosActivity.this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show()
+                );
+            }
+        }).start();
+    }
+
     private void crearGasto(double monto, String categoria, String descripcion) {
         new Thread(() -> {
             try {
@@ -128,13 +133,15 @@ public class GastosActivity extends AppCompatActivity {
                 nuevo.monto = monto;
                 nuevo.categoria = categoria;
                 nuevo.descripcion = descripcion;
-                nuevo.usuario_id = idUsuarioMaestro;
+                nuevo.usuario_id = idUsuario;
 
-                Gasto creado = ApiClient.createGasto(nuevo);
+                Gasto creado = GastoApiClient.createGasto(nuevo);
 
                 runOnUiThread(() -> {
                     if (creado != null && creado.id != 0) {
-                        cargarGastosDesdeAPI();
+                        cargarGastos();
+                        Toast.makeText(this, "Ingresado de forma exitosa!!",
+                                Toast.LENGTH_SHORT).show();
                     } else {
                         Toast.makeText(this, "Error al crear", Toast.LENGTH_SHORT).show();
                     }
@@ -153,10 +160,13 @@ public class GastosActivity extends AppCompatActivity {
                 actualizado.monto = monto;
                 actualizado.categoria = categoria;
                 actualizado.descripcion = descripcion;
-                actualizado.usuario_id = idUsuarioMaestro;
+                actualizado.usuario_id = idUsuario;
 
-                ApiClient.updateGasto(idGasto, actualizado);
-                runOnUiThread(this::cargarGastosDesdeAPI);
+                GastoApiClient.updateGasto(idGasto, actualizado);
+                runOnUiThread(() -> {
+                    cargarGastos();
+                    Toast.makeText(this, "Actualizado con éxito", Toast.LENGTH_SHORT).show();
+                });
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -166,8 +176,11 @@ public class GastosActivity extends AppCompatActivity {
     private void borrarGasto(int idGasto) {
         new Thread(() -> {
             try {
-                ApiClient.deleteGasto(idGasto);
-                runOnUiThread(this::cargarGastosDesdeAPI);
+                GastoApiClient.deleteGasto(idGasto);
+                runOnUiThread(() -> {
+                    cargarGastos();
+                    Toast.makeText(this, "Eliminado con éxito", Toast.LENGTH_SHORT).show();
+                });
             } catch (Exception e) {
                 e.printStackTrace();
             }

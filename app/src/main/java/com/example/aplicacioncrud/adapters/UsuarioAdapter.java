@@ -1,4 +1,4 @@
-package com.example.aplicacioncrud;
+package com.example.aplicacioncrud.adapters;
 
 import android.view.LayoutInflater;
 import android.view.View;
@@ -8,10 +8,12 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.aplicacioncrud.R;
+import com.example.aplicacioncrud.models.Usuario;
+
 import java.util.List;
 
 public class UsuarioAdapter extends RecyclerView.Adapter<UsuarioAdapter.ViewHolder> {
-
     private List<Usuario> usuarios;
     private OnItemClickListener listener;
     private OnItemLongClickListener longClickListener;
